@@ -157,3 +157,171 @@ document.addEventListener('DOMContentLoaded', async () => {
   setCurrentDeals(deals);
   render(currentDeals, currentPagination);
 });
+
+selectPage.addEventListener('change', async (event) => {
+  const page = parseInt(event.target.value);
+  const pageSize = parseInt(selectShow.value);
+  const deals = await fetchDeals(page, pageSize );
+  setCurrentDeals(deals);
+  render(currentDeals, currentPagination);
+});
+
+
+
+const fetchAllDeals = async () => {
+  let allDeals = [];
+  let page = 1;
+  let moreDeals = true;
+
+  while (moreDeals) {
+    const { result, meta } = await fetchDeals(page, 100); 
+    allDeals = allDeals.concat(result);
+
+    if (page >= meta.pageCount) {
+      moreDeals = false;
+    } else {
+      page++;
+    }
+  }
+
+  return allDeals;
+};
+
+const filterDiscountButton = document.querySelector('#filter-discount');
+
+filterDiscountButton.addEventListener('click', async () => {
+  const allDeals = await fetchAllDeals();
+  const filteredDeals = allDeals.filter(deal => deal.discount > 50);
+
+  setCurrentDeals({ result: filteredDeals, meta: { count: filteredDeals.length, currentPage: 1, pageCount: 1 } });
+  render(filteredDeals, currentPagination);
+});
+
+const filterMostCommentedButton = document.querySelector('#filter-most-commented');
+
+filterMostCommentedButton.addEventListener('click', async () => {
+  const allDeals = await fetchAllDeals();
+  const filteredDeals = allDeals.filter(deal => deal.comments > 5);
+
+  setCurrentDeals({ result: filteredDeals, meta: { count: filteredDeals.length, currentPage: 1, pageCount: 1 } });
+  render(filteredDeals, currentPagination);
+});
+
+const filterHotDealsButton = document.querySelector('#filter-hot-deals');
+
+filterHotDealsButton.addEventListener('click', async () => {
+  // Fetch all deals from all pages
+  const allDeals = await fetchAllDeals();
+
+  // Filter deals with temperature > 100
+  const filteredDeals = allDeals.filter(deal => deal.temperature > 100);
+
+  // Update current deals and render
+  setCurrentDeals({ result: filteredDeals, meta: { count: filteredDeals.length, currentPage: 1, pageCount: 1 } });
+  render(filteredDeals, currentPagination);
+});
+
+// Gestionnaire d'événements pour le tri par prix
+document.querySelector('#sort-select').addEventListener('change', async (event) => {
+  const sortType = event.target.value; // Récupère la valeur de l'option sélectionnée
+  const pageSize = parseInt(selectShow.value); // Nombre de deals par page sélectionné
+  const currentPage = currentPagination.currentPage; // Page actuelle
+
+  // On récupère les offres et on les trie en fonction de l'option sélectionnée
+  const deals = await fetchDeals(currentPage, pageSize);
+
+  if (sortType === 'price-asc') {
+    // Trie croissant par prix
+    deals.result.sort((a, b) => a.price - b.price);
+  } else if (sortType === 'price-desc') {
+    // Trie décroissant par prix
+    deals.result.sort((a, b) => b.price - a.price);
+  }
+
+  setCurrentDeals(deals); // Met à jour les deals actuels
+  render(currentDeals, currentPagination); // Rendu des deals avec pagination
+});
+
+document.querySelector('#sort-select').addEventListener('change', async (event) => {
+  const sortType = event.target.value; // Récupère la valeur de l'option sélectionnée
+  const pageSize = parseInt(selectShow.value); // Nombre de deals par page sélectionné
+  const currentPage = currentPagination.currentPage; // Page actuelle
+
+  // Récupère les deals à partir de l'API
+  const deals = await fetchDeals(currentPage, pageSize);
+
+  // Trie les deals en fonction du type de tri sélectionné
+  if (sortType === 'date-asc') {
+    // Trie croissant par date (les plus récentes en premier)
+    deals.result.sort((a, b) => new Date(a.published * 1000) - new Date(b.published * 1000));
+  } else if (sortType === 'date-desc') {
+    // Trie décroissant par date (les plus anciennes en premier)
+    deals.result.sort((a, b) => new Date(b.published * 1000) - new Date(a.published * 1000));
+  }
+
+  // Met à jour les deals après le tri
+  setCurrentDeals(deals);
+  render(currentDeals, currentPagination);
+});
+
+const fetchVintedSales = async (setId) => {
+  try {
+    const response = await fetch(`https://lego-api-blue.vercel.app/sales?id=${setId}`);
+    const body = await response.json();
+
+    if (body.success !== true) {
+      console.error('Error fetching sales:', body);
+      return [];
+    }
+
+    return body.data || [];
+  } catch (error) {
+    console.error('Error fetching sales:', error);
+    return [];
+  }
+};
+
+/**
+ * Render Vinted sales
+ * @param {Array} sales - Array of sales data
+ */
+const renderVintedSales = (sales) => {
+  const salesSection = document.querySelector('#vinted-sales');
+  const fragment = document.createDocumentFragment();
+
+  if (sales.length === 0) {
+    salesSection.innerHTML = '<p>No sales found for this set.</p>';
+    return;
+  }
+
+  const salesHTML = sales
+    .map(sale => {
+      return `
+        <div class="sale">
+          <a href="${sale.link}" target="_blank">
+            <img src="${sale.photo}" alt="${sale.title}" />
+            <h3>${sale.title}</h3>
+            <p>Price: ${sale.price}€</p>
+            <p>Location: ${sale.location}</p>
+            <p>Comments: ${sale.comments}</p>
+          </a>
+        </div>
+      `;
+    })
+    .join('');
+
+  fragment.innerHTML = salesHTML;
+  salesSection.innerHTML = '<h2>Vinted Sales</h2>';
+  salesSection.appendChild(fragment);
+};
+
+document.querySelector('#lego-set-id-select').addEventListener('change', async (event) => {
+  const selectedSetId = event.target.value; // Récupère l'ID du set Lego sélectionné
+
+  // Récupère les ventes Vinted pour ce set
+  const sales = await fetchVintedSales(selectedSetId);
+
+  // Affiche les ventes dans l'interface
+  renderVintedSales(sales);
+});
+
