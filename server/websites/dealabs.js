@@ -1,151 +1,92 @@
-const axios = require('axios');
+const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const path = require('path');
 
 /**
- * Scrape deals from Dealabs
- * @param {string} url - The URL to scrape
- * @returns {Promise<Array>} - A promise that resolves to an array of deals
+ * Parse webpage data response
+ * @param  {String} data - HTML response
+ * @return {Array} deals
  */
-async function scrape(url) {
-  try {
-    // Set headers to mimic a browser request
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
-      'Referer': 'https://www.dealabs.com/'
-    };
-    // Make HTTP request to the dealabs page
-    const response = await axios.get(url, { headers });
-    const html = response.data;
-    const $ = cheerio.load(html);
-   
-    // Log HTML structure for debugging
-    console.log("Page loaded, looking for deals...");
-   
-    // Array to store our deals
-    const deals = [];
-   
-    // Try different selectors for deal items
-    const dealElements = $('article.thread');
-   
-    console.log(`Found ${dealElements.length} potential deals`);
-   
-    // Extract data from each deal element
-    dealElements.each((index, element) => {
-      try {
-        const titleElement = $(element).find('h2, .threadCardTitle, .cept-tt');
-        const title = titleElement.text().trim();
-       
-        // Try different price selectors
-        const priceElement = $(element).find('.thread-price, .threadCardPrice, .cept-tp');
-        const price = priceElement.length ? priceElement.text().trim() : "Price not found";
-       
-        // Get link
-        let link = $(element).find('a.cept-tt, a.threadCardTitle, h2 a').attr('href');
-       
-        // Try different image selectors
-        let imageUrl = $(element).find('img.thread-image, img.threadCardImage').attr('src') ||
-                      $(element).find('img.thread-image, img.threadCardImage').attr('data-src') ||
-                      $(element).find('img.cept-thread-img').attr('src');
-       
-        // Get temperature/hotness
-        const hotnessElement = $(element).find('.cept-vote-temp, .vote-box--count, .threadCardDealVoteCount');
-        const hotness = hotnessElement.length ? hotnessElement.text().trim() : "0";
-       
-        console.log(`Processing: ${title}`);
-       
-        // Add all deals since we're already filtering with search query
-        deals.push({
-          title,
-          price,
-          hotness,
-          link,
-          imageUrl,
-          source: 'dealabs',
-          scrapedAt: new Date().toISOString()
-        });
-      } catch (err) {
-        console.error(`Error processing deal element: ${err.message}`);
-      }
-    });
-   
-    // Save the deals to a file
-    await saveDeals(deals);
-    
-    return deals;
-  } catch (error) {
-    console.error('Error scraping Dealabs:', error.message);
-    if (error.response) {
-      console.error(`Status: ${error.response.status}`);
-    }
-    return [];
-  }
-}
+const parse = (data) => {
+  const $ = cheerio.load(data, { 'xmlMode': true });
 
-/**
- * Save deals to a JSON file
- * @param {Array} deals - Array of deal objects to save
- * @returns {Promise<void>}
- */
-async function saveDeals(deals) {
-  try {
-    if (deals && deals.length > 0) {
-      console.log(`Found ${deals.length} items`);
-      console.log('Sample items:');
-      
-      // Show up to 3 sample items
-      deals.slice(0, 3).forEach((deal, i) => {
-        console.log(`${i+1}. ${deal.title} - ${deal.price}`);
-      });
-      
-      // Save all deals to a single file
-      const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
-      const filename = `dealabs_deals_${timestamp}.json`;
-      const dataDir = path.join(__dirname, '..', 'data'); // Use the same directory as your other script
-      
-      // Create data directory if it doesn't exist
-      if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-      }
-      
-      const filePath = path.join(dataDir, filename);
-      fs.writeFileSync(filePath, JSON.stringify(deals, null, 2));
-      console.log(`💾 All data saved to ${filePath}`);
-    } else {
-      console.log('No items found');
-    }
-  } catch (error) {
-    console.error('Error saving deals:', error.message);
-  }
-}
+  const deals = $('div.js-threadList article')
+    .map((i, element) => {
+      const link = $(element)
+        .find('a[data-t="threadLink"]')
+        .attr('href');
 
-/**
- * Main function to scrape and save deals from a URL
- * @param {string} url - The URL to scrape
- */
-async function main(url = 'https://www.dealabs.com/') {
-  try {
-    console.log(`🕵️‍♀️ browsing ${url} website`);
-    await scrape(url);
-    console.log('done');
-    process.exit(0);
-  } catch (e) {
-    console.error(e);
-    process.exit(1);
-  }
-}
+      const data = JSON.parse(
+        $(element).find('div.js-vue2').attr('data-vue2')
+      );
 
-// Export both the scrape function for modular use and the main function for direct execution
-module.exports = {
-  scrape,
-  main
+      const thread = data.props.thread || null;
+      const retail = thread.nextBestPrice || null;
+      const price = thread.price || null;
+      const discount = price && retail ? parseInt((1 - price / retail) * 100) : null;
+      const temperature = +thread.temperature || null;
+      const image = `https://static-pepper.dealabs.com/threads/raw/${thread.mainImage.slotId}/${thread.mainImage.name}/re/300x300/qt/60/${thread.mainImage.name}.${thread.mainImage.ext}`;
+      const comments = +thread.commentCount || 0;
+      const published = new Date(thread.publishedAt * 1000) || null;
+      const title = thread.title || null;
+
+      // Match uniquement les ID à 5 chiffres
+      const idMatch = link ? link.match(/\b\d{5}\b/) : null;
+      const id = idMatch ? idMatch[0] : thread?.threadId || null;
+
+      return {
+        link,
+        retail,
+        price,
+        discount,
+        temperature,
+        image,
+        comments,
+        published,
+        title,
+        id,
+      };
+    })
+    .get();
+
+  // Filtrer uniquement les ID à 5 chiffres
+  const filteredDeals = deals.filter((deal) => /^\d{5}$/.test(deal.id));
+
+  return filteredDeals;
 };
 
-// If this file is being run directly, execute the main function with command line arguments
-if (require.main === module) {
-  const [,, url] = process.argv;
-  main(url);
-}
+/**
+ * Scrape a given URL page
+ * @param {String} url - URL to parse
+ * @returns {Promise<Array|null>} Extracted deals
+ */
+module.exports.scrape = async (url) => {
+  try {
+    console.log(`Scraping from: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.google.com/',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const body = await response.text();
+    const parsedDeals = parse(body);
+
+    // Stocker le résultat dans un fichier JSON
+    fs.writeFileSync('Alldeals.json', JSON.stringify(parsedDeals, null, 2), 'utf-8');
+    console.log(`${parsedDeals.length} deals saved to FilteredDeals.json`);
+
+    return parsedDeals;
+  } catch (error) {
+    console.error(`Error scraping ${url}: ${error.message}`);
+    return null;
+  }
+};

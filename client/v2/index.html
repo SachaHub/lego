@@ -6,7 +6,7 @@
   </head>
   <body>
     <h1>Lego</h1>
-    <section id="options">
+    <section id="pages">
       <div id="show">
         <label for="show-select">Show:</label>
         <select name="show" id="show-select">
@@ -15,30 +15,64 @@
           <option value="24">24</option>
         </select>
       </div>
-      <div id="page">
-        <label for="page-select">Go to page:</label>
-        <select name="page" id="page-select"> </select>
+      <div id="pagination-container" class="pagination-container">
       </div>
-      <div id="filters">
-        <button id="filter-discount">By best discount (>50%)</button>
-        <button id="filter-most-commented">By most commented (>15 comments)</button>
-        <button id="filter-hot-deals">By hot deals (>100 temperature)</button>
-      </div>
-      <div id="sort">
-        <label for="sort-select">Sort:</label>
-        <select name="sort" id="sort-select">
-          <option value="price-asc">Cheaper</option>
-          <option value="price-desc">Expensive</option>
-          <option value="date-asc">Recently published</option>
-          <option value="date-desc">Anciently published</option>
-        </select>
-      </div>
+      
     </section>
+    
+    <section id="options">
+      <div id="filters">
+    
+        <!-- Discount Slider -->
+        <div class="slider-container">
+          <label for="discount-slider">Discount (%):</label>
+          <input type="range" id="discount-slider" min="0" max="100" value="0" step="1">
+          <span id="discount-value">0%</span>
+        </div>
+    
+        <!-- Comments Slider -->
+        <div class="slider-container">
+          <label for="commented-slider">Comments:</label>
+          <input type="range" id="commented-slider" min="0" max="12" value="0">
+          <span id="commented-value">0</span>
+        </div>
+    
+        <!-- Hot Deals Slider -->
+        <div class="slider-container">
+          <label for="hotdeals-slider">Hot Deals:</label>
+          <input type="range" id="hotdeals-slider" min="0" max="250" value="0">
+          <span id="hotdeals-value">0</span>
+        </div>
+    
+        <!-- Sort Dropdown -->
+        <div id="sort">
+          <label for="sort-select">Sort:</label>
+          <select name="sort" id="sort-select">
+            <option value="price-asc">Cheaper</option>
+            <option value="price-desc">Expensive</option>
+            <option value="date-asc">Recently published</option>
+            <option value="date-desc">Anciently published</option>
+          </select>
+        </div>
+      </div>
+    
+      <!-- Favorite Deals Button -->
+      <button type="button" id="filter-favorite-deals">★ Favorite deals</button>
+      <!-- Best Deals Button -->
+      <button type="button" id="filter-best-deals">🏆 Best Deals</button>
+      <p id="best-deals-loading" style="display: none; color: #2563eb; font-weight: bold;">Loading Best Deals... 🔎</p>
+
+
+    </section>
+    
+    
+
     <section id="lego">
       <h2>Lego sets</h2>
       <div>
         <label>Lego set id:</label>
-        <select id="lego-set-id-select"></select> 
+        <input type="text" id="lego-set-id-select"></input> 
+        <button id="fetch-sales-btn">Sales</button>
       </div>
     </section>
     <section id="indicators">
@@ -53,23 +87,25 @@
       </div>
       <div>
         <span>p5 sales price value</span>
-        <span>0</span>
+        <span id="p5">0</span>
       </div>
       <div>
         <span>p25 sales price value</span>
-        <span>0</span>
+        <span id="p25">0</span>
       </div>
       <div>
         <span>p50 sales price value</span>
-        <span>0</span>
+        <span id="p50">0</span>
       </div>
       <div>
         <span>Lifetime value</span>
-        <span>10 days</span>
+        <span id="lifetime">10 days</span>
       </div>
     </section>
     <section id="deals"></section>
+    <section id="vinted-sales"></section>
     <script type="text/javascript" charset="UTF-8" src="utils.js"></script>
     <script type="text/javascript" charset="UTF-8" src="portfolio.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
   </body>
 </html>
