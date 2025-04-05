@@ -1,0 +1,33 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "api.js",
+        "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/deals/search",
+        "dest": "api.js"
+      },
+      {
+        "src": "/deals/(.*)",
+        "dest": "api.js"
+      },
+      {
+        "src": "/sales/search",
+        "dest": "api.js"
+      },
+      {
+        "src": "/",
+        "dest": "api.js"
+      },
+      {
+        "src": "/(.*)",
+        "status": 404,
+        "dest": "api.js"
+      }
+    ]
+  }
+  
