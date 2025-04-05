@@ -20,5 +20,10 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
+  },
+  "scripts": {
+    "dev": "nodemon index.js",  
+    "build": "echo \"No build step required\" && exit 0", 
+    "start": "node index.js"  
   }
 }
