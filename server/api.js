@@ -4,7 +4,7 @@ const helmet = require('helmet');
 const {MongoClient} = require('mongodb');
 
 const PORT = 8092;
-const MONGODB_URI = 'mongodb+srv://Hackkmae:MANGOlogan159@hackmae.lzdgy.mongodb.net/?retryWrites=true&w=majority&appName=Hackmae';
+const MONGODB_URI = 'mongodb+srv://sachalieges:F4G5H6HF@cluster0.d7bfpoj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const MONGODB_DB_NAME = 'Lego';
 
 const app = express();
